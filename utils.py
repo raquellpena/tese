@@ -55,9 +55,9 @@ def calc_pixels_e_area_qrcode(image,comp_real_qr, largura_real_qr):
     #with_100 = pixelcount.calc_pixels_width_by_line("resultados_dimensoes/result_image_dimensions.jpg", [0, 0, 0],100)
     #with_100_cm = (with_100 * m_l)/qr_width
     #print("--- Nº Pixeis na linha 100 \t: ", with_100, "\n\tCm: ", with_100_cm)
-    return qr_area, qr_area_real
+    return qr_area, qr_area_real, qr_width
 
 # run func
-calc_pixels_e_area_qrcode("1.jpg", 5,5)
+#calc_pixels_e_area_qrcode("1.jpg", 5,5)
 
 

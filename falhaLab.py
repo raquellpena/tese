@@ -620,12 +620,14 @@ class ImageProcessor:
                 (m, b, rot90, x0, x1, thick, res) = self.window_crack_calculation(x, y, w, h)
                 degrees = math.degrees(np.arctan(m))
                 #if rot90: degrees = degrees + 90
+                rot_degrees = degrees
                 if m >= 0:
-                    degrees = -degrees
+                    rot_degrees = -degrees
+
                 self.declives.append(degrees)
                 self.draw_regression_line(m, b, rot90, x0, x1, thick, x, y, w, h)
 
-                res_window_object = R_WINDOW(position, res, degrees)
+                res_window_object = R_WINDOW(position, res, rot_degrees)
                 r_windows.append(res_window_object)
 
 
@@ -681,10 +683,11 @@ class ImageProcessor:
 
     def histogram(self):
         declives = image_processor.declives
-        #print(declives)
+        print(len(declives))
+        print(declives)
 
         media = sum(declives) / len(declives)
-        print('Média:', media)
+        print('Média Declives:', media)
 
         positivos = [declive for declive in declives if declive >= 0]
         print('Orientação positiva:', len(positivos))
@@ -692,7 +695,9 @@ class ImageProcessor:
         negativos = [declive for declive in declives if declive < 0]
         print('Orientação negativa:', len(negativos))
 
-        declives = [np.round(x / 20, 0) * 20 for x in declives]
+        declives = [np.round(x, 2) for x in declives]
+        print(declives)
+
         counts, bins, patches = plt.hist(declives, bins=20, edgecolor='black')
 
         plt.xticks(bins[::5], bins[::5], rotation=90)
@@ -700,24 +705,36 @@ class ImageProcessor:
         plt.title('Histograma de Declives')
         plt.xlabel('Declives')
         resultado = f'Média: {media}\n Orientação positiva: {len(positivos)}\nOrientação negativa: {len(negativos)}'
-        plt.text(-0, 30, resultado)
+        plt.text(0.5, 0.95, resultado, transform=plt.gca().transAxes, verticalalignment='top', fontsize=12,
+                 bbox=dict(facecolor='white', alpha=0.5, edgecolor='none'))
+
+        # Adjust layout and save the figure
+        plt.tight_layout()
+        plt.savefig("hist.pdf", bbox_inches='tight')
         plt.savefig("hist.pdf")
 
 
 # Usage example
 if __name__ == "__main__":
-    image_name = "1.jpg"
+    image_name = "9.jpeg"
     comp_real_qr = 5
     largura_real_qr = 5
-    qr_area, qr_area_real = utils.calc_pixels_e_area_qrcode(image_name, comp_real_qr=comp_real_qr, largura_real_qr=largura_real_qr)
+    qr_area, qr_area_real, qr_width = utils.calc_pixels_e_area_qrcode(image_name, comp_real_qr=comp_real_qr, largura_real_qr=largura_real_qr)
     image_processor = ImageProcessor('/Users/raquelpena/Downloads/projeto_falha-2/resultados_rede/9.jpg')
     image_processor.preprocess_image()
     image_processor.display_image()
     image_processor.histogram()
     image_processor.draw_res_windows()
-    for r in range(len(r_windows)):
-        pixelcount.calc_pixels_window(image_processor.original_image, r_windows[r].window, r_windows[r].declive, r)
 
+    window_average_width = pixelcount.calc_pixels_window(image_processor.original_image, r_windows[0].window, r_windows[0].declive, 1)
+
+    # pixel correlation
+    real_window_average_width = (window_average_width * largura_real_qr)/qr_width
+
+    #convert to mm
+    real_window_average_width = real_window_average_width*10
+
+    print(str(real_window_average_width) + " mm")
 #    image_processor = ImageProcessor('resultados_rede/9.jpg')
 #    processed_images = image_processor.preprocess_image(min_sz=10)
 #    image_processor.test_all()

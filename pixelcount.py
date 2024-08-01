@@ -4,6 +4,7 @@ import math
 from PIL import Image
 from matplotlib import pyplot as plt
 import cv2
+import utils
 from sklearn.linear_model import LinearRegression
 
 
@@ -111,7 +112,6 @@ def detect_white_gray_crocodile(img):
     plt.title('Output Image'), plt.xticks([]), plt.yticks([])
     plt.show()
 
-
 def detect_white_gray(img):
     img = "resultados_rede/" + img
     image = np.array(Image.open(img).convert('RGB'))
@@ -149,7 +149,6 @@ def detect_white_gray(img):
     plt.subplot(121), plt.imshow(image)
     plt.show()
 
-
 def get_slope_for_window(im, sought):
     # intermedio antes de fazer a função fixed_window_crack_width_calculation
     x_array = []
@@ -182,7 +181,7 @@ def get_slope_for_window(im, sought):
 
     return declive
 
-'''
+
 def variable_window_crack_width_calculation(img, sought):  # por retificar
 
     color_array = np.array(sought)
@@ -250,7 +249,7 @@ def variable_window_crack_width_calculation(img, sought):  # por retificar
             starting_window_x = None
             end_window_x = -1
 
-        y = y + window_heigh
+        y = y + window_height
 
 def fixed_window_crack_width_calculation(img, sought):
 
@@ -324,7 +323,7 @@ def fixed_window_crack_width_calculation(img, sought):
                 declive = lrm.coef_[0][0]
                 angle = math.atan(declive)
                 angle_degrees = math.degrees(angle)
-                print("DECLIVE JANELA ", janelas_com_dados, ": ", angle_degrees)
+                #print("DECLIVE JANELA ", janelas_com_dados, ": ", angle_degrees)
 
                 plt.scatter(x, y, color='g')
                 plt.plot(x, lrm.predict(x), color='k')
@@ -375,8 +374,6 @@ def fixed_window_crack_width_calculation(img, sought):
     print("JANELAS COM DADOS: ", janelas_com_dados)
     print("JANELAS BRANCAS: ", janelas_brancas)
     print("MEDIA DE LARGURA REGRESSÃO:", average_of_all_windows_average_pixel_count_per_line)
-'''
-
 
 def calc_pixels_window(image, window, degrees, img_number):
     """wxx = np.array(pontos_janela_x).reshape(-1, 1)
@@ -398,13 +395,9 @@ def calc_pixels_window(image, window, degrees, img_number):
 
     bottom_right = (bottom_x, bottom_y)
 
-    print("*****************************")
-    print(top_left)
-    print(bottom_right)
-
     image_window_block = image[top_left[0]:bottom_right[0], top_left[1]:bottom_right[1]]
     image_window_block_np_array = np.array(image_window_block)
-    print(image_window_block)
+
     plt.imshow(image_window_block_np_array, interpolation='nearest')
     plt.show()
 
@@ -423,21 +416,31 @@ def calc_pixels_window(image, window, degrees, img_number):
     image_window_block_converted.save(image_name)
 
     black = (0, 0, 0)
-    print("-----------------" + str(degrees))
+
     rotated_image = image_window_block_converted.rotate(degrees, PIL.Image.NEAREST, expand=True, fillcolor=black)
 
     if rotated_image.mode != 'RGB':
         rotated_image = rotated_image.convert('RGB')
     rotated_image.save("window_rotated/ROTATED_" + str(img_number) + ".jpg")
 
-
-    """
+    rotated_width, rotated_height = rotated_image.size
     # Calculo das larguras da janela depois da regressão linear e rotação segundo o declive
 
-    average_line_pixel_count_of_window = calc_pixels_width(image_name, [0, 0, 0])
+    window_average_line_pixel_count = 0
+    valid_lines = 0
+    for i in range(rotated_height):
+        line_res = calc_pixels_width_by_line_comparison_not_equal_sought(rotated_image, rotated_width, black, i)
+        if line_res != -1:
+            window_average_line_pixel_count += line_res
+            valid_lines += 1
 
-    all_windows_average_line_pixel_count += average_line_pixel_count_of_window
-    """
+    if valid_lines != 0:
+        window_average_line_pixel_count = round(window_average_line_pixel_count/valid_lines, 0)
+    else:
+        window_average_line_pixel_count = None
+
+    return window_average_line_pixel_count
+
 
 def calc_pixels_crack(img, sought):  # sought = cor do contorno
     # Open image and make into numpy array
@@ -482,6 +485,37 @@ def calc_pixels_width_by_line(img, sought, line):  # sought = cor do contorno
 
     return line_width
 
+def calc_pixels_width_by_line_comparison_not_equal_sought(window, width, sought, line):  # sought = cor do contorno
+    count_per_line = []
+    color_array = np.array(sought)
+
+    image_np = np.array(window)
+    # Traverse the image line by line
+    pixel_anterior = image_np[0, 0]
+    start_count = False
+
+    count = 0
+    for x in range(width):
+
+        pixel_value = image_np[line, x]
+
+        if not(np.array_equal(pixel_value, color_array)):
+            if not np.array_equal(pixel_value, pixel_anterior) and start_count == True:
+                start_count = False
+                count_per_line.append(count)
+        else:
+            count += 1
+            start_count = True
+
+        pixel_anterior = image_np[line, x]
+
+    if len(count_per_line) != 0:
+        average_line = round(sum(count_per_line) / len(count_per_line), 0)
+    else:
+        average_line = -1
+
+    return average_line
+
 
 def calc_pixels_width(img, sought):  # sought = cor do contorno
 
@@ -519,7 +553,23 @@ def calc_pixels_width(img, sought):  # sought = cor do contorno
 
 
 if __name__ == '__main__':
-    detect_white_gray("3.jpg")
+    detect_white_gray("9.jpg")
     im = np.array(Image.open("resultados_dimensoes/result_image_dimensions.jpg").convert('RGB'))
 
     #fixed_window_crack_width_calculation(im, [0, 0, 0])
+
+    print("FUNC 2")
+    comp_real_qr = 5
+    largura_real_qr = 5
+    qr_area, qr_area_real, qr_width = utils.calc_pixels_e_area_qrcode("9.jpeg", comp_real_qr=comp_real_qr,
+                                                                      largura_real_qr=largura_real_qr)
+
+    val = calc_pixels_width("resultados_dimensoes/result_image_dimensions.jpg", [0, 0, 0])
+
+    # pixel correlation
+    real_window_average_width = (val * largura_real_qr) / qr_width
+
+    # convert to mm
+    real_window_average_width = real_window_average_width * 10
+
+    print(str(real_window_average_width) + " mm")
