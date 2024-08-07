@@ -256,10 +256,10 @@ class ImageProcessor:
         x1 = x[-1]
         # y = points[:, 1].reshape(-1, 1)
         y = np.array(pointsY)[idx]
-        #if (len(x) > 10):
-            #print("x:", x[:5], x[-5:], "\ny:", y[:5], y[-5:])
-        #else:
-            #print("x:", x, "\ny:", y)
+        # if (len(x) > 10):
+        # print("x:", x[:5], x[-5:], "\ny:", y[:5], y[-5:])
+        # else:
+        # print("x:", x, "\ny:", y)
 
         x = x.reshape(-1, 1)
         # Fit linear regression model
@@ -317,13 +317,13 @@ class ImageProcessor:
 
         if rot90:
             thickness = int(thickness * height)
-            #print("DRAW ROT90" + str(m))
+            # print("DRAW ROT90" + str(m))
             # pygame.draw.line(self.screen, (150, 205, 50), (ys, xs), (ye, xe), 2)
             self.draw_line_str(f"{m:.2f} ({thickness})", (150, 205, 50), (ys, xs), (ye, xe), 2)  #
         else:
             # pygame.draw.line(self.screen,  (150, 205, 50), (xs, ys), (xe, ye), 2)
             thickness = int(thickness * width)
-            #print("DRAW NOT ROT90" + str(m))
+            # print("DRAW NOT ROT90" + str(m))
             self.draw_line_str(f"{m:.2f} ({thickness})", (150, 205, 50), (xs, ys), (xe, ye), 2)
 
     def setup_pygame(self):
@@ -562,7 +562,7 @@ class ImageProcessor:
                             espessura_texto)
 
                 # Visualizar a imagem com Matplotlib
-                #plt.imshow(self.image)
+                # plt.imshow(self.image)
                 plt.axis('off')  # Ocultar os eixos
                 # plt.show()
                 plt.savefig("res_windows.pdf")
@@ -600,7 +600,7 @@ class ImageProcessor:
         if show['cursor']:
             # win.fill((0, 0, 0))
             pygame.draw.rect(self.screen, YELLOW, self.rectangle, width=4)
-            #print("Pos:", self.rectangle)
+            # print("Pos:", self.rectangle)
 
             # pygame.draw.rect(self.screen, YELLOW, (100, 100, 200, 100), 3)
             # show['cursor'] = None
@@ -613,13 +613,13 @@ class ImageProcessor:
         Parameters:
         - screen: The Pygame screen surface.
         """
-        #print("showing valid positions")
+        # print("showing valid positions")
         for position in self.valid_positions:
             if type == "l":
                 (x, y, w, h) = position
                 (m, b, rot90, x0, x1, thick, res) = self.window_crack_calculation(x, y, w, h)
                 degrees = math.degrees(np.arctan(m))
-                #if rot90: degrees = degrees + 90
+                # if rot90: degrees = degrees + 90
                 rot_degrees = degrees
                 if m >= 0:
                     rot_degrees = -degrees
@@ -660,7 +660,7 @@ class ImageProcessor:
             cv2.putText(self.image, str(res_text), (x_texto, y_texto), fonte, escala_fonte, cor_texto, espessura_texto)
 
             # Visualizar a imagem com Matplotlib
-            #plt.imshow(self.image)
+            # plt.imshow(self.image)
             plt.axis('off')  # Ocultar os eixos
         # plt.show()
         plt.savefig("res_windows.pdf")
@@ -676,15 +676,15 @@ class ImageProcessor:
             print("No preproc image to show...")
             return
 
-        #print("showing preproc image")
+        # print("showing preproc image")
         # preprocessed_surf = pygame.image.frombuffer(cv2.cvtColor(self.full_preprocessed_image, cv2.COLOR_BGR2RGB), self.full_preprocessed_image.shape[1::-1], "RGB")
         # self.preprocessed_image = cv2.imread('OutputImg/CrackDetected-Curr.jpg')
         screen.blit(self.preprocessed_image, (0, 0))
 
     def histogram(self):
         declives = image_processor.declives
-        print(len(declives))
-        print(declives)
+        #print(len(declives))
+        #print(declives)
 
         media = sum(declives) / len(declives)
         print('Média Declives:', media)
@@ -696,7 +696,7 @@ class ImageProcessor:
         print('Orientação negativa:', len(negativos))
 
         declives = [np.round(x, 2) for x in declives]
-        print(declives)
+        #print(declives)
 
         counts, bins, patches = plt.hist(declives, bins=20, edgecolor='black')
 
@@ -719,22 +719,83 @@ if __name__ == "__main__":
     image_name = "9.jpeg"
     comp_real_qr = 5
     largura_real_qr = 5
-    qr_area, qr_area_real, qr_width = utils.calc_pixels_e_area_qrcode(image_name, comp_real_qr=comp_real_qr, largura_real_qr=largura_real_qr)
+    qr_area, qr_area_real, qr_width = utils.calc_pixels_e_area_qrcode(image_name, comp_real_qr=comp_real_qr,
+                                                                      largura_real_qr=largura_real_qr)
     image_processor = ImageProcessor('/Users/raquelpena/Downloads/projeto_falha-2/resultados_rede/9.jpg')
     image_processor.preprocess_image()
     image_processor.display_image()
     image_processor.histogram()
     image_processor.draw_res_windows()
 
-    window_average_width = pixelcount.calc_pixels_window(image_processor.original_image, r_windows[0].window, r_windows[0].declive, 1)
+    image_index = 0
+    sum_window_average_width=0
+    sum_window_average_width_not_rotated=0
+    window_average_width_list = []
+    not_rotated_window_average_width_list = []
+    for w in r_windows:
+        val_not_rotated, val_rotated = pixelcount.calc_pixels_window(image_processor.original_image, w.window, w.declive, image_index)
+        sum_window_average_width += val_rotated
+
+        # pixel correlation
+        real = (val_rotated * largura_real_qr) / qr_width
+
+        # convert to mm
+        real_window_average_width = real * 10
+
+        window_average_width_list.append(str(real_window_average_width) + " mm")
+
+        #-------------
+        sum_window_average_width_not_rotated += val_not_rotated
+
+        # pixel correlation
+        real_not_rotated = (val_not_rotated * largura_real_qr) / qr_width
+
+        # convert to mm
+        real_window_average_width_not_rotated = real_not_rotated * 10
+
+        not_rotated_window_average_width_list.append(str(real_window_average_width) + " mm")
+
+        image_index += 1
+
+    #window_average_width = pixelcount.calc_pixels_window(image_processor.original_image, r_windows[0].window, r_windows[0].declive, 1)
+
+    # Abra (ou crie) um arquivo em modo de escrita
+    with open('ROTATED_window_average_width_list.txt', 'w') as file:
+        # Itere sobre cada elemento da lista
+        for item in window_average_width_list:
+            # Escreva o elemento no arquivo seguido por uma nova linha
+            file.write(f"{item}\n")
+
+    with open('NOT_ROTATED_window_average_width_list.txt', 'w') as file:
+        # Itere sobre cada elemento da lista
+        for item in not_rotated_window_average_width_list:
+            # Escreva o elemento no arquivo seguido por uma nova linha
+            file.write(f"{item}\n")
+
+    window_average_width = sum_window_average_width / len(r_windows)
 
     # pixel correlation
-    real_window_average_width = (window_average_width * largura_real_qr)/qr_width
+    real_window_average_width = (window_average_width * largura_real_qr) / qr_width
 
-    #convert to mm
-    real_window_average_width = real_window_average_width*10
+    # convert to mm
+    real_window_average_width = real_window_average_width * 10
+    print("----- ROTATED -----")
 
     print(str(real_window_average_width) + " mm")
+
+    #-----------------
+    print("----- NOT ROTATED -----")
+    not_rotated_window_average_width = sum_window_average_width / len(r_windows)
+
+    # pixel correlation
+    not_rotated_real_window_average_width = (not_rotated_window_average_width * largura_real_qr) / qr_width
+
+    # convert to mm
+    not_rotated_real_window_average_width = not_rotated_real_window_average_width * 10
+
+    print(str(not_rotated_real_window_average_width) + " mm")
+
+    print(window_average_width_list)
 #    image_processor = ImageProcessor('resultados_rede/9.jpg')
 #    processed_images = image_processor.preprocess_image(min_sz=10)
 #    image_processor.test_all()

@@ -263,7 +263,7 @@ def fixed_window_crack_width_calculation(img, sought):
     # Get the shape of the array (height, width, channels for RGB image)
     image_height, image_width, channels = im.shape
 
-    print("H: %d W: %d" % (image_height, image_width))
+    #print("H: %d W: %d" % (image_height, image_width))
 
     standard_value = 200
     window_height = standard_value
@@ -395,15 +395,8 @@ def calc_pixels_window(image, window, degrees, img_number):
 
     bottom_right = (bottom_x, bottom_y)
 
-    image_window_block = image[top_left[0]:bottom_right[0], top_left[1]:bottom_right[1]]
+    image_window_block = image[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]]
     image_window_block_np_array = np.array(image_window_block)
-
-    plt.imshow(image_window_block_np_array, interpolation='nearest')
-    plt.show()
-
-    plt.imshow(image, interpolation='nearest')
-    plt.show()
-
 
     # rotate windowed_image by the slope angle calculated before
 
@@ -414,8 +407,32 @@ def calc_pixels_window(image, window, degrees, img_number):
 
     image_name = "window_rotated/BEFORE_ROTATED_" + str(img_number) + ".jpg"
     image_window_block_converted.save(image_name)
-
     black = (0, 0, 0)
+
+    #-----------------------
+
+    # rotated_image = image_window_block_converted
+    #
+    # if rotated_image.mode != 'RGB':
+    #     rotated_image = rotated_image.convert('RGB')
+    #
+    # rotated_width, rotated_height = rotated_image.size
+    # # Calculo das larguras da janela depois da regressão linear e rotação segundo o declive
+    #
+    # not_rotated_window_average_line_pixel_count = 0
+    # not_rotated_valid_lines = 0
+    # for i in range(rotated_height):
+    #     line_res = calc_pixels_width_by_line_comparison_not_equal_sought(rotated_image, rotated_width, black, i)
+    #     if line_res != -1:
+    #         not_rotated_window_average_line_pixel_count += line_res
+    #         not_rotated_valid_lines += 1
+    #
+    # if not_rotated_valid_lines != 0:
+    #     not_rotated_window_average_line_pixel_count = round(not_rotated_window_average_line_pixel_count / not_rotated_valid_lines, 0)
+    # else:
+    #     not_rotated_window_average_line_pixel_count = None
+
+    #----------------------------
 
     rotated_image = image_window_block_converted.rotate(degrees, PIL.Image.NEAREST, expand=True, fillcolor=black)
 
@@ -439,7 +456,8 @@ def calc_pixels_window(image, window, degrees, img_number):
     else:
         window_average_line_pixel_count = None
 
-    return window_average_line_pixel_count
+    # return not_rotated_window_average_line_pixel_count, window_average_line_pixel_count
+    return 0, window_average_line_pixel_count
 
 
 def calc_pixels_crack(img, sought):  # sought = cor do contorno
@@ -504,6 +522,7 @@ def calc_pixels_width_by_line_comparison_not_equal_sought(window, width, sought,
                 start_count = False
                 count_per_line.append(count)
         else:
+
             count += 1
             start_count = True
 
