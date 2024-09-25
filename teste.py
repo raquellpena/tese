@@ -27,7 +27,7 @@ def non_max_suppression(data, win):
     return data_max
 
 # start calulcation
-image = cv2.imread("resultados/1.jpg")
+image = cv2.imread("resultados_rede/1.jpg")
 gray_image = cv2.cvtColor(image,cv2.COLOR_BGR2GRAY)
 
 with_nmsup = True #apply non-maximal suppression

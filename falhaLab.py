@@ -1,10 +1,4 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
-Created on Wed Apr 10 10:39:40 2024
-
-@author: nmm
-
 v - visualisar grelha de anotação ou regressões lineares na grelha de anotação
 p - escolher pré-processamento de imagem.
 f - regressão linear no retangulo de seleção.
@@ -13,10 +7,10 @@ k/l ou drag rato bottom right retangulo seleção - altera tamanho retangulo sel
 h/j - itera retangulo seleção pela grelha anotação
 
 q - sair
-
-
 """
+import os
 
+image_name = ''
 SEL_THRESHOLD = 4
 SMALL_WINDOW = 40
 
@@ -35,13 +29,11 @@ import math
 declives = []
 r_windows = []
 
-
 class R_WINDOW:
     def __init__(self, window, res, declive):
         self.window = window
         self.res = res
         self.declive = declive
-
 
 """import pygame
 import random
@@ -144,6 +136,8 @@ class ImageProcessor:
         img = self.apply_preprocessing_filters(self.image)
         self.preprocessed_image = pygame.image.frombuffer(cv2.cvtColor(img, cv2.COLOR_BGR2RGB), self.image.shape[1::-1],
                                                           "RGB")
+
+
         self.valid_positions = self.divide_into_small_sizes(img, min_sz)
 
     def divide_into_small_sizes(self, image: np.ndarray, min_sz: int) -> List[Tuple[int, int, int, int]]:
@@ -184,14 +178,37 @@ class ImageProcessor:
         """
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         bilateral = cv2.bilateralFilter(gray, 5, 75, 75)
-        edges = cv2.Canny(bilateral, 30, 120)
+        edges = cv2.Canny(bilateral, 30, 80)
         kernel = np.ones((5, 5), np.uint8)
         closing = cv2.morphologyEx(edges, cv2.MORPH_CLOSE, kernel)
         orb = cv2.ORB_create(nfeatures=1500)
         featured_image = closing
         # keypoints, descriptors = orb.detectAndCompute(closing, None)
         # featured_image = cv2.drawKeypoints(closing, keypoints, None)
-        cv2.imwrite('OutputImg/CrackDetected-Curr.jpg', featured_image)
+
+        # Find contours from the closing (edge map)
+        contours, _ = cv2.findContours(closing, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+        # Create a mask to fill the contours
+        filled_contours = np.zeros_like(gray)  # Same size as the grayscale image
+
+        # Fill the contours with white (255) on the mask
+        cv2.drawContours(filled_contours, contours, -1, 255, thickness=10)
+
+        # Convert the filled contour image to color (3 channels) to apply color
+        filled_contours_color = cv2.cvtColor(filled_contours, cv2.COLOR_GRAY2BGR)
+
+        # Color the filled areas (you can change the color here)
+        filled_contours_color[filled_contours == 255] = [255, 0, 0]  # Filling with green color
+
+        featured_image_bgr = cv2.cvtColor(featured_image, cv2.COLOR_GRAY2BGR)
+        # Optionally merge the colored filled areas with the original image
+        # Blending original image with the filled colored areas
+        final_image = cv2.addWeighted(featured_image_bgr, 1, filled_contours_color, 0.3, 0)
+
+        parse_image_name = image_name.split('.')
+        new_image_name = 'filtro_marcada/' + parse_image_name[0] + '_marcada_rede_filtro.' + parse_image_name[1]
+        cv2.imwrite(new_image_name , final_image)
         return featured_image
 
     def smooth_image(self, image):
@@ -213,18 +230,7 @@ class ImageProcessor:
     ###
 
     def window_crack_calculation(self, x, y, width, height):
-        """
-        Perform fixed window crack width calculation on a subimage defined by its coordinates.
 
-        Parameters:
-        - x (int): The x-coordinate of the top-left corner of the subimage.
-        - y (int): The y-coordinate of the top-left corner of the subimage.
-        - width (int): The width of the subimage.
-        - height (int): The height of the subimage.
-
-        Returns:
-        - float: The average angle of lines detected in the subimage.
-        """
         img_array = pygame.surfarray.array3d(self.preprocessed_image)
         img = img_array[x:x + width, y:y + height]
         # color_array = np.array([255, 255, 255])  # Assuming white color for line detection
@@ -319,12 +325,14 @@ class ImageProcessor:
             thickness = int(thickness * height)
             # print("DRAW ROT90" + str(m))
             # pygame.draw.line(self.screen, (150, 205, 50), (ys, xs), (ye, xe), 2)
-            self.draw_line_str(f"{m:.2f} ({thickness})", (150, 205, 50), (ys, xs), (ye, xe), 2)  #
+            degrees = math.degrees(np.arctan(m))
+            self.draw_line_str(f"{degrees:.2f} ({thickness})", (150, 205, 50), (ys, xs), (ye, xe), 2)  #
         else:
             # pygame.draw.line(self.screen,  (150, 205, 50), (xs, ys), (xe, ye), 2)
             thickness = int(thickness * width)
+            degrees = math.degrees(np.arctan(m))
             # print("DRAW NOT ROT90" + str(m))
-            self.draw_line_str(f"{m:.2f} ({thickness})", (150, 205, 50), (xs, ys), (xe, ye), 2)
+            self.draw_line_str(f"{degrees:.2f} ({thickness})", (150, 205, 50), (xs, ys), (xe, ye), 2)
 
     def setup_pygame(self):
         pygame.init()
@@ -621,7 +629,7 @@ class ImageProcessor:
                 degrees = math.degrees(np.arctan(m))
                 # if rot90: degrees = degrees + 90
                 rot_degrees = degrees
-                if m >= 0:
+                if m < 0:
                     rot_degrees = -degrees
 
                 self.declives.append(degrees)
@@ -637,7 +645,7 @@ class ImageProcessor:
     def draw_res_windows(self):
 
         plt.clf()
-        plt.figure(figsize=(8, 6), dpi=100)
+        plt.figure(figsize=(20, 15), dpi=200)
 
         for r_w in r_windows:
             (x, y, w, h) = r_w.window
@@ -660,9 +668,9 @@ class ImageProcessor:
             cv2.putText(self.image, str(res_text), (x_texto, y_texto), fonte, escala_fonte, cor_texto, espessura_texto)
 
             # Visualizar a imagem com Matplotlib
-            # plt.imshow(self.image)
+            plt.imshow(self.image)
             plt.axis('off')  # Ocultar os eixos
-        # plt.show()
+        #plt.show()
         plt.savefig("res_windows.pdf")
 
     def draw_preprocessed_image(self, screen):
@@ -687,41 +695,57 @@ class ImageProcessor:
         #print(declives)
 
         media = sum(declives) / len(declives)
-        print('Média Declives:', media)
+        print('Média Graus:', media)
 
         positivos = [declive for declive in declives if declive >= 0]
-        print('Orientação positiva:', len(positivos))
+        print('Graus positivos:', len(positivos))
 
         negativos = [declive for declive in declives if declive < 0]
-        print('Orientação negativa:', len(negativos))
+        print('Graus negativos:', len(negativos))
 
         declives = [np.round(x, 2) for x in declives]
         #print(declives)
 
         counts, bins, patches = plt.hist(declives, bins=20, edgecolor='black')
 
-        plt.xticks(bins[::5], bins[::5], rotation=90)
 
-        plt.title('Histograma de Declives')
-        plt.xlabel('Declives')
-        resultado = f'Média: {media}\n Orientação positiva: {len(positivos)}\nOrientação negativa: {len(negativos)}'
+        plt.xticks(bins[::5], [f'{x:.2f}' for x in bins[::5]], rotation=90)
+
+        plt.title('Histograma de Graus')
+        plt.xlabel('Declives em graus')
+        resultado = f'Média: {media}\n Graus positivos: {len(positivos)}\nGraus negativos: {len(negativos)}'
         plt.text(0.5, 0.95, resultado, transform=plt.gca().transAxes, verticalalignment='top', fontsize=12,
                  bbox=dict(facecolor='white', alpha=0.5, edgecolor='none'))
 
         # Adjust layout and save the figure
         plt.tight_layout()
         plt.savefig("hist.pdf", bbox_inches='tight')
-        plt.savefig("hist.pdf")
 
+def delete_files_in_directory(directory_path):
+   try:
+     files = os.listdir(directory_path)
+     for file in files:
+       file_path = os.path.join(directory_path, file)
+       if os.path.isfile(file_path):
+         os.remove(file_path)
+     print("All files deleted successfully.")
+   except OSError:
+     print("Error occurred while deleting files.")
 
 # Usage example
 if __name__ == "__main__":
-    image_name = "9.jpeg"
+
+    # ----- CLEAN WINDOW_ROTATED FOLDER
+    directory_path = 'window_rotated'
+    delete_files_in_directory(directory_path)
+    # ----------------------------------
+
+    image_name = "5croc_perto_3.jpg"
     comp_real_qr = 5
     largura_real_qr = 5
     qr_area, qr_area_real, qr_width = utils.calc_pixels_e_area_qrcode(image_name, comp_real_qr=comp_real_qr,
                                                                       largura_real_qr=largura_real_qr)
-    image_processor = ImageProcessor('/Users/raquelpena/Downloads/projeto_falha-2/resultados_rede/9.jpg')
+    image_processor = ImageProcessor('/Users/raquelpena/Downloads/projeto_falha-2/resultados_rede/'+ image_name)
     image_processor.preprocess_image()
     image_processor.display_image()
     image_processor.histogram()
@@ -733,7 +757,7 @@ if __name__ == "__main__":
     window_average_width_list = []
     not_rotated_window_average_width_list = []
     for w in r_windows:
-        val_not_rotated, val_rotated = pixelcount.calc_pixels_window(image_processor.original_image, w.window, w.declive, image_index)
+        val_rotated = pixelcount.calc_pixels_window(image_processor.original_image, w.window, w.declive, image_index)
         sum_window_average_width += val_rotated
 
         # pixel correlation
@@ -744,31 +768,12 @@ if __name__ == "__main__":
 
         window_average_width_list.append(str(real_window_average_width) + " mm")
 
-        #-------------
-        sum_window_average_width_not_rotated += val_not_rotated
-
-        # pixel correlation
-        real_not_rotated = (val_not_rotated * largura_real_qr) / qr_width
-
-        # convert to mm
-        real_window_average_width_not_rotated = real_not_rotated * 10
-
-        not_rotated_window_average_width_list.append(str(real_window_average_width) + " mm")
-
         image_index += 1
-
-    #window_average_width = pixelcount.calc_pixels_window(image_processor.original_image, r_windows[0].window, r_windows[0].declive, 1)
 
     # Abra (ou crie) um arquivo em modo de escrita
     with open('ROTATED_window_average_width_list.txt', 'w') as file:
         # Itere sobre cada elemento da lista
         for item in window_average_width_list:
-            # Escreva o elemento no arquivo seguido por uma nova linha
-            file.write(f"{item}\n")
-
-    with open('NOT_ROTATED_window_average_width_list.txt', 'w') as file:
-        # Itere sobre cada elemento da lista
-        for item in not_rotated_window_average_width_list:
             # Escreva o elemento no arquivo seguido por uma nova linha
             file.write(f"{item}\n")
 
@@ -783,21 +788,4 @@ if __name__ == "__main__":
 
     print(str(real_window_average_width) + " mm")
 
-    #-----------------
-    print("----- NOT ROTATED -----")
-    not_rotated_window_average_width = sum_window_average_width / len(r_windows)
 
-    # pixel correlation
-    not_rotated_real_window_average_width = (not_rotated_window_average_width * largura_real_qr) / qr_width
-
-    # convert to mm
-    not_rotated_real_window_average_width = not_rotated_real_window_average_width * 10
-
-    print(str(not_rotated_real_window_average_width) + " mm")
-
-    print(window_average_width_list)
-#    image_processor = ImageProcessor('resultados_rede/9.jpg')
-#    processed_images = image_processor.preprocess_image(min_sz=10)
-#    image_processor.test_all()
-# Further processing or analysis using image_processor.preprocessed_images,
-# image_processor.valid_positions, and image_processor.full_preprocessed_image

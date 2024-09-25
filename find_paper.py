@@ -22,7 +22,7 @@ def find_qrcode(image):
     gray = cv2.LUT(gray, table)
 
     # apply threshold in the detection, adjusts have been made to get the best results by trial/error
-    ret,thresh1 = cv2.threshold(gray,80,255,cv2.THRESH_BINARY)
+    ret,thresh1 = cv2.threshold(gray,100,255,cv2.THRESH_BINARY)
 
     #thresh = cv2.adaptiveThreshold(gray,255,1,1,11,2)
 
@@ -43,7 +43,7 @@ def find_qrcode(image):
                     perimeter = cv2.arcLength(i,True)
                     approx = cv2.approxPolyDP(i,0.1*perimeter,True)
                     #update when current area is bigger than the max area obtained until this point at time
-                    if area > max_area  and len(approx) == 4:
+                    if area > max_area:
                             #biggest = approx
                             max_area = area
                             indexReturn = index
@@ -65,4 +65,4 @@ def find_qrcode(image):
     cv2.imwrite('./thresh/thresh_' + image,thresh1)
 
 if __name__ == '__main__':
-    find_qrcode("1.jpg")
+    find_qrcode("7long_perto.jpg")

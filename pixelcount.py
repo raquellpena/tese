@@ -8,6 +8,8 @@ import utils
 from sklearn.linear_model import LinearRegression
 
 
+
+
 """ calc_pixels_qr_code(img, sought)
         - image: image path for the image that contains the qrcode detected, contoured and filled
         - sought: contour color to use in searching
@@ -411,28 +413,13 @@ def calc_pixels_window(image, window, degrees, img_number):
 
     #-----------------------
 
-    # rotated_image = image_window_block_converted
-    #
-    # if rotated_image.mode != 'RGB':
-    #     rotated_image = rotated_image.convert('RGB')
-    #
-    # rotated_width, rotated_height = rotated_image.size
-    # # Calculo das larguras da janela depois da regressão linear e rotação segundo o declive
-    #
-    # not_rotated_window_average_line_pixel_count = 0
-    # not_rotated_valid_lines = 0
-    # for i in range(rotated_height):
-    #     line_res = calc_pixels_width_by_line_comparison_not_equal_sought(rotated_image, rotated_width, black, i)
-    #     if line_res != -1:
-    #         not_rotated_window_average_line_pixel_count += line_res
-    #         not_rotated_valid_lines += 1
-    #
-    # if not_rotated_valid_lines != 0:
-    #     not_rotated_window_average_line_pixel_count = round(not_rotated_window_average_line_pixel_count / not_rotated_valid_lines, 0)
-    # else:
-    #     not_rotated_window_average_line_pixel_count = None
+    rotated_image = image_window_block_converted
 
-    #----------------------------
+    if rotated_image.mode != 'RGB':
+        rotated_image = rotated_image.convert('RGB')
+
+    rotated_width, rotated_height = rotated_image.size
+    # Calculo das larguras da janela depois da regressão linear e rotação segundo o declive
 
     rotated_image = image_window_block_converted.rotate(degrees, PIL.Image.NEAREST, expand=True, fillcolor=black)
 
@@ -456,8 +443,8 @@ def calc_pixels_window(image, window, degrees, img_number):
     else:
         window_average_line_pixel_count = None
 
-    # return not_rotated_window_average_line_pixel_count, window_average_line_pixel_count
-    return 0, window_average_line_pixel_count
+    return window_average_line_pixel_count
+
 
 
 def calc_pixels_crack(img, sought):  # sought = cor do contorno
@@ -572,15 +559,14 @@ def calc_pixels_width(img, sought):  # sought = cor do contorno
 
 
 if __name__ == '__main__':
-    detect_white_gray("9.jpg")
+    detect_white_gray("3bi_longe.jpg")
     im = np.array(Image.open("resultados_dimensoes/result_image_dimensions.jpg").convert('RGB'))
 
-    #fixed_window_crack_width_calculation(im, [0, 0, 0])
 
     print("FUNC 2")
-    comp_real_qr = 5
-    largura_real_qr = 5
-    qr_area, qr_area_real, qr_width = utils.calc_pixels_e_area_qrcode("9.jpeg", comp_real_qr=comp_real_qr,
+    comp_real_qr = 3
+    largura_real_qr = 3
+    qr_area, qr_area_real, qr_width = utils.calc_pixels_e_area_qrcode("3bi_longe.jpg", comp_real_qr=comp_real_qr,
                                                                       largura_real_qr=largura_real_qr)
 
     val = calc_pixels_width("resultados_dimensoes/result_image_dimensions.jpg", [0, 0, 0])
