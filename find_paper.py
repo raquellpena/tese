@@ -63,6 +63,3 @@ def find_qrcode(image):
     # save the image of the contour and of the threshold(just for data gathering)
     cv2.imwrite('./contours/contoured_' + image, img)
     cv2.imwrite('./thresh/thresh_' + image,thresh1)
-
-if __name__ == '__main__':
-    find_qrcode("7long_perto.jpg")

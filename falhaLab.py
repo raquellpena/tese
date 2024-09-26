@@ -12,7 +12,7 @@ import os
 
 image_name = ''
 SEL_THRESHOLD = 4
-SMALL_WINDOW = 40
+SMALL_WINDOW = 80 #TAMANHO DOS BLOCOS VERDES
 
 from typing import List, Tuple
 import numpy as np
@@ -42,7 +42,7 @@ import random
 pygame.init()
 
 # Set up the display
-WIDTH, HEIGHT = 800, 600
+WIDTH, HEIGHT = 200, 100
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Line Visualization")
 """
@@ -84,35 +84,6 @@ while running:
 # Quit Pygame
 pygame.quit()
 """
-
-
-def draw_thick_lineX(screen, color, start_pos, end_pos, thickness):
-    ### NOT USED!!!
-    # Determine the direction of the line
-    dx = end_pos[0] - start_pos[0]
-    dy = end_pos[1] - start_pos[1]
-
-    # Determine the length of the line
-    length = max(abs(dx), abs(dy))
-
-    # Calculate the step size for each pixel
-    if length != 0:
-        step_x = dx / length
-        step_y = dy / length
-    else:
-        step_x, step_y = 0, 0
-
-    # Draw the line segment by segment
-    for i in range(int(length)):
-        # Calculate the alpha value (transparency) based on the distance from the start
-        alpha = int(255 * (1 - i / length))
-        # Create a surface with the desired color and alpha
-        surface = pygame.Surface((thickness, thickness), pygame.SRCALPHA)
-        surface.fill((color[0], color[1], color[2], alpha))
-        # Calculate the position of the line segment
-        pos = (int(start_pos[0] + i * step_x - thickness // 2), int(start_pos[1] + i * step_y - thickness // 2))
-        # Draw the line segment
-        screen.blit(surface, pos)
 
 
 class ImageProcessor:
@@ -176,6 +147,7 @@ class ImageProcessor:
         Returns:
         - np.ndarray: The preprocessed image.
         """
+        #FILTRO QUANDO SE CARREGA NA TECLA P
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         bilateral = cv2.bilateralFilter(gray, 5, 75, 75)
         edges = cv2.Canny(bilateral, 30, 80)
@@ -183,8 +155,6 @@ class ImageProcessor:
         closing = cv2.morphologyEx(edges, cv2.MORPH_CLOSE, kernel)
         orb = cv2.ORB_create(nfeatures=1500)
         featured_image = closing
-        # keypoints, descriptors = orb.detectAndCompute(closing, None)
-        # featured_image = cv2.drawKeypoints(closing, keypoints, None)
 
         # Find contours from the closing (edge map)
         contours, _ = cv2.findContours(closing, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -211,29 +181,11 @@ class ImageProcessor:
         cv2.imwrite(new_image_name , final_image)
         return featured_image
 
-    def smooth_image(self, image):
-        bilateral = cv2.bilateralFilter(image, 5, 75, 75)
-        return bilateral
-
-    def detect_edges(self, image):
-        edges = cv2.Canny(image, 30, 120)
-        kernel = np.ones((5, 5), np.uint8)
-        closing = cv2.morphologyEx(edges, cv2.MORPH_CLOSE, kernel)
-        return closing
-
-    def detect_features(self, image):
-        orb = cv2.ORB_create(nfeatures=1500)
-        keypoints, descriptors = orb.detectAndCompute(image, None)
-        featured_image = cv2.drawKeypoints(image, keypoints, None)
-        return featured_image
-
-    ###
-
     def window_crack_calculation(self, x, y, width, height):
 
         img_array = pygame.surfarray.array3d(self.preprocessed_image)
         img = img_array[x:x + width, y:y + height]
-        # color_array = np.array([255, 255, 255])  # Assuming white color for line detection
+        # Assuming white color for line detection
         pointsX = []
         pointsY = []
         szx, szy, _color = np.shape(img)
@@ -253,20 +205,13 @@ class ImageProcessor:
             pointsY = aux
         else:
             rot90 = False
-        # points = np.array(points)
-        # x = points[:, 0].reshape(-1, 1)
+
         x = np.array(pointsX)
         idx = x.argsort()
         x = x[idx]
         x0 = x[0]
         x1 = x[-1]
-        # y = points[:, 1].reshape(-1, 1)
         y = np.array(pointsY)[idx]
-        # if (len(x) > 10):
-        # print("x:", x[:5], x[-5:], "\ny:", y[:5], y[-5:])
-        # else:
-        # print("x:", x, "\ny:", y)
-
         x = x.reshape(-1, 1)
         # Fit linear regression model
         lrm = LinearRegression()
@@ -319,26 +264,21 @@ class ImageProcessor:
         ye = y + int((x1 * m + b) * height)
 
         # Draw the regression line on the screen surface
-        # print("L:",m,b,rot90,x0,x1,xs,ys,xe,ye)
 
         if rot90:
             thickness = int(thickness * height)
-            # print("DRAW ROT90" + str(m))
-            # pygame.draw.line(self.screen, (150, 205, 50), (ys, xs), (ye, xe), 2)
             degrees = math.degrees(np.arctan(m))
             self.draw_line_str(f"{degrees:.2f} ({thickness})", (150, 205, 50), (ys, xs), (ye, xe), 2)  #
         else:
-            # pygame.draw.line(self.screen,  (150, 205, 50), (xs, ys), (xe, ye), 2)
             thickness = int(thickness * width)
             degrees = math.degrees(np.arctan(m))
-            # print("DRAW NOT ROT90" + str(m))
             self.draw_line_str(f"{degrees:.2f} ({thickness})", (150, 205, 50), (xs, ys), (xe, ye), 2)
 
     def setup_pygame(self):
         pygame.init()
         self.screen = pygame.display.set_mode((self.image.shape[1], self.image.shape[0]))
         # Load a standard font (Arial) on macOS
-        font_path = "/System/Library/Fonts/Geneva.ttf"  ##"/System/Library/Fonts/Arial.ttf"  # Path to Arial font on macOS
+        font_path = "/System/Library/Fonts/Geneva.ttf"
         font_size = 10
         self.font = load_font(font_path, font_size)
 
@@ -389,21 +329,12 @@ class ImageProcessor:
 
         rectangle_draging = False
 
-        # object current co-ordinates 
-        # x = 200
-        # y = 200
-
-        # dimensions of the object 
-        # width = 20
-        # height = 20
-
         vel = 3  ## speed of change with keyboard
 
         small_pos = 0  ## Current subposition
         # Set up colors
 
         show = {'valid_positions': "", 'preprocessed_image': False, 'cursor': False}
-        ## what should be shown
         show = self.draw_scene(show)
         pygame.display.flip()
 
@@ -411,30 +342,22 @@ class ImageProcessor:
             pygame.time.delay(50)
             refresh = False
 
-            # handle quit and mouse events (keyboard is handled later)
             for event in pygame.event.get():
                 if event.type == QUIT:
                     pygame.quit()
-                    # pygame.display.quit()
                     self.screen = None
                     return
                 elif event.type == pygame.MOUSEBUTTONDOWN:
-                    # if rectangle.collidepoint(event.pos):
                     rectangle_draging = True
                     mouse_down = event.pos
                     refresh = True
                     if show['cursor']:
-                        ## mouse down only drags on bottomright (else resets start)
                         if (abs(mouse_down[0] - self.rectangle.bottomright[0]) > 10 and \
                                 abs(mouse_down[1] - self.rectangle.bottomright[1]) > 10):
                             self.rectangle.x = mouse_down[0]
                             self.rectangle.y = mouse_down[1]
-                        # (abs(mouse_down[0] - self.rectangle.topleft[0]) < 10 and \
-                        # abs(mouse_down[1] - self.rectangle.topleft[1]) < 10 ) or \
                         else:
                             pass
-                            # mouse_dragging = False
-
                     else:
                         show['cursor'] = True
                         self.rectangle.x = mouse_down[0]
@@ -442,14 +365,11 @@ class ImageProcessor:
                         self.rectangle.width = 4
                         self.rectangle.height = 4
 
-
-
                 elif event.type == pygame.MOUSEBUTTONUP:
                     if event.button == 1:
                         rectangle_draging = False
                         mouse_up = event.pos
-                        ## if cursor is not visible it becomes visible
-                        ##  or if it is not dragged
+
                         if not (show['cursor']) or \
                                 abs(mouse_up[0] - mouse_down[0]) < 3 and \
                                 abs(mouse_up[1] - mouse_down[1]) < 3:
@@ -470,7 +390,6 @@ class ImageProcessor:
                         if offset_y > 3:
                             self.rectangle.height = offset_y
                             refresh = True
-                        # show['cursor'] = True
 
             if (not (refresh)):
                 keys = pygame.key.get_pressed()
@@ -569,10 +488,7 @@ class ImageProcessor:
                 cv2.putText(self.image, str(res_text), (x_texto, y_texto), fonte, escala_fonte, cor_texto,
                             espessura_texto)
 
-                # Visualizar a imagem com Matplotlib
-                # plt.imshow(self.image)
                 plt.axis('off')  # Ocultar os eixos
-                # plt.show()
                 plt.savefig("res_windows.pdf")
 
                 refresh = False
@@ -606,12 +522,7 @@ class ImageProcessor:
             self.draw_valid_positions(self.screen, show['valid_positions'])
 
         if show['cursor']:
-            # win.fill((0, 0, 0))
             pygame.draw.rect(self.screen, YELLOW, self.rectangle, width=4)
-            # print("Pos:", self.rectangle)
-
-            # pygame.draw.rect(self.screen, YELLOW, (100, 100, 200, 100), 3)
-            # show['cursor'] = None
         return show
 
     def draw_valid_positions(self, screen, type):
@@ -621,23 +532,21 @@ class ImageProcessor:
         Parameters:
         - screen: The Pygame screen surface.
         """
-        # print("showing valid positions")
         for position in self.valid_positions:
             if type == "l":
                 (x, y, w, h) = position
                 (m, b, rot90, x0, x1, thick, res) = self.window_crack_calculation(x, y, w, h)
                 degrees = math.degrees(np.arctan(m))
                 # if rot90: degrees = degrees + 90
-                rot_degrees = degrees
-                if m < 0:
-                    rot_degrees = -degrees
+                rot_degrees = -degrees
+                if m >= 0:
+                    rot_degrees = degrees
 
                 self.declives.append(degrees)
                 self.draw_regression_line(m, b, rot90, x0, x1, thick, x, y, w, h)
 
                 res_window_object = R_WINDOW(position, res, rot_degrees)
                 r_windows.append(res_window_object)
-
 
             else:
                 pygame.draw.rect(screen, (0, 255, 0), position, 1)
@@ -670,7 +579,6 @@ class ImageProcessor:
             # Visualizar a imagem com Matplotlib
             plt.imshow(self.image)
             plt.axis('off')  # Ocultar os eixos
-        #plt.show()
         plt.savefig("res_windows.pdf")
 
     def draw_preprocessed_image(self, screen):
@@ -684,15 +592,10 @@ class ImageProcessor:
             print("No preproc image to show...")
             return
 
-        # print("showing preproc image")
-        # preprocessed_surf = pygame.image.frombuffer(cv2.cvtColor(self.full_preprocessed_image, cv2.COLOR_BGR2RGB), self.full_preprocessed_image.shape[1::-1], "RGB")
-        # self.preprocessed_image = cv2.imread('OutputImg/CrackDetected-Curr.jpg')
         screen.blit(self.preprocessed_image, (0, 0))
 
     def histogram(self):
         declives = image_processor.declives
-        #print(len(declives))
-        #print(declives)
 
         media = sum(declives) / len(declives)
         print('Média Graus:', media)
@@ -704,10 +607,8 @@ class ImageProcessor:
         print('Graus negativos:', len(negativos))
 
         declives = [np.round(x, 2) for x in declives]
-        #print(declives)
 
-        counts, bins, patches = plt.hist(declives, bins=20, edgecolor='black')
-
+        counts, bins, patches = plt.hist(declives, bins=5, edgecolor='black') #NUMERO DE BARRAS NO HISTOGRAMA
 
         plt.xticks(bins[::5], [f'{x:.2f}' for x in bins[::5]], rotation=90)
 
@@ -771,7 +672,8 @@ if __name__ == "__main__":
         image_index += 1
 
     # Abra (ou crie) um arquivo em modo de escrita
-    with open('ROTATED_window_average_width_list.txt', 'w') as file:
+    image_name_no_extension = image_name.split('.')[0]
+    with open(image_name_no_extension, 'w') as file:
         # Itere sobre cada elemento da lista
         for item in window_average_width_list:
             # Escreva o elemento no arquivo seguido por uma nova linha
@@ -787,5 +689,5 @@ if __name__ == "__main__":
     print("----- ROTATED -----")
 
     print(str(real_window_average_width) + " mm")
-
-
+    with open(image_name_no_extension, 'w+') as file:
+        file.write(f"Average width: {real_window_average_width} mm\n")
